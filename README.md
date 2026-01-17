@@ -6,4 +6,13 @@ This program allows you to convert the graphics from the game [Hidamari Sketch D
 
 It will only handle formats used by the game. For a more generic editor, try [https://github.com/Garhoogin/NitroPaint](NitroPaint).
 
-*This program is currently being written, nothing works for now*
+*This program is currently being written, it's pretty limited*
+
+## Usage
+
+Convert a file into a .png image.
+
+```bash
+$ miyako -d --nclr <file>.NCLR --ncgr `<file>.NCGR#` --nscr <file>.NSCR output.png
+```
+*Some files are LZ11-encoded and have a number sign at the end of their filename*
