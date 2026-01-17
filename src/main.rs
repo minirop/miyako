@@ -2,6 +2,7 @@ use clap::Parser;
 use common::decompress;
 use image::RgbaImage;
 use image::imageops::overlay;
+use ncer::Ncer;
 use ncgr::Ncgr;
 use nclr::Nclr;
 use nscr::Nscr;
@@ -10,11 +11,12 @@ use std::io;
 use std::io::Cursor;
 
 mod common;
+mod ncer;
 mod ncgr;
 mod nclr;
 mod nscr;
 
-#[derive(clap::Args, Debug)]
+#[derive(clap::Args)]
 #[group(required = true, multiple = false)]
 struct Action {
     #[arg(short, long)]
@@ -24,26 +26,47 @@ struct Action {
     encode: bool,
 }
 
-#[derive(Debug, Parser)]
+#[derive(Parser)]
 struct Args {
     filename: String,
 
     #[command(flatten)]
     action: Action,
 
+    // tileset
     #[arg(long)]
     ncgr: Option<String>,
 
+    // palette
     #[arg(long)]
     nclr: Option<String>,
 
+    // scene/image
     #[arg(long)]
     nscr: Option<String>,
+
+    // animation
+    #[arg(long)]
+    nanr: Option<String>,
+
+    // cell/frame
+    #[arg(long)]
+    ncer: Option<String>,
 }
 
 fn main() -> io::Result<()> {
     let args = Args::parse();
 
+    if args.nscr.is_some() {
+        decode_image(args)?;
+    } else if args.nanr.is_some() {
+        decode_animation(args)?;
+    }
+
+    Ok(())
+}
+
+fn decode_image(args: Args) -> io::Result<()> {
     let palette = if let Some(palette) = args.nclr {
         let mut file = File::open(palette)?;
         let buffer = decompress(&mut file)?;
@@ -95,7 +118,37 @@ fn main() -> io::Result<()> {
         }
     }
 
-    let _ = image.save("final.png");
+    let _ = image.save(&args.filename);
+    Ok(())
+}
+
+fn decode_animation(args: Args) -> io::Result<()> {
+    let _palette = if let Some(palette) = args.nclr {
+        let mut file = File::open(palette)?;
+        let buffer = decompress(&mut file)?;
+        let mut reader = Cursor::new(buffer);
+        Nclr::new(&mut reader)?
+    } else {
+        panic!("Palette missing!");
+    };
+
+    let _tileset = if let Some(tileset) = args.ncgr {
+        let mut file = File::open(tileset)?;
+        let buffer = decompress(&mut file)?;
+        let mut reader = Cursor::new(buffer);
+        Ncgr::new(&mut reader)?
+    } else {
+        panic!("Tileset missing!");
+    };
+
+    let _cells = if let Some(cells) = args.ncer {
+        let mut file = File::open(cells)?;
+        let buffer = decompress(&mut file)?;
+        let mut reader = Cursor::new(buffer);
+        Ncer::new(&mut reader)?
+    } else {
+        panic!("cells missing!");
+    };
 
     Ok(())
 }

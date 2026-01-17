@@ -4,7 +4,6 @@ use std::io;
 use std::io::Read;
 use std::io::Seek;
 
-#[derive(Debug)]
 pub struct NscrTile {
     pub id: u16,
     pub palette: u8,
