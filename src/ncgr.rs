@@ -1,3 +1,4 @@
+use crate::common::read_header;
 use byteorder::LittleEndian;
 use byteorder::ReadBytesExt;
 use std::io;
@@ -10,12 +11,8 @@ pub struct Ncgr {
 
 impl Ncgr {
     pub fn new<R: Read + Seek>(reader: &mut R) -> io::Result<Self> {
-        let magic = reader.read_u32::<LittleEndian>()?;
-        assert_eq!(magic, 0x4e434752);
-
-        let _unknown1 = reader.read_u32::<LittleEndian>()?;
-        let _size = reader.read_u32::<LittleEndian>()?;
-        let _unknown2 = reader.read_u32::<LittleEndian>()?;
+        let header = read_header(reader)?;
+        assert_eq!(header.magic, 0x4e434752);
 
         let char_ = reader.read_u32::<LittleEndian>()?;
         assert_eq!(char_, 0x43484152);

@@ -74,3 +74,28 @@ pub fn decompress<R: Read + Seek>(reader: &mut R) -> io::Result<Vec<u8>> {
 
     Ok(buffer)
 }
+
+pub struct Header {
+    pub magic: u32,
+    pub endianness: u16,
+    pub version: u16,
+    pub size: u32,
+}
+
+pub fn read_header<R: Read>(reader: &mut R) -> io::Result<Header> {
+    let magic = reader.read_u32::<LittleEndian>()?;
+
+    let endianness = reader.read_u16::<LittleEndian>()?;
+    assert_eq!(endianness, 0xFEFF);
+    let version = reader.read_u16::<LittleEndian>()?;
+    let size = reader.read_u32::<LittleEndian>()?;
+    let _header_size = reader.read_u16::<LittleEndian>()?;
+    let _sections_count = reader.read_u16::<LittleEndian>()?;
+
+    Ok(Header {
+        magic,
+        endianness,
+        version,
+        size,
+    })
+}

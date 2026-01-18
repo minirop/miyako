@@ -1,3 +1,4 @@
+use crate::common::read_header;
 use byteorder::ReadBytesExt;
 use std::io::Read;
 use std::io::{self, Cursor};
@@ -17,12 +18,8 @@ pub struct Nclr {
 
 impl Nclr {
     pub fn new<R: Read>(reader: &mut R) -> io::Result<Self> {
-        let magic = reader.read_u32::<LittleEndian>()?;
-        assert_eq!(magic, 0x4e434c52);
-
-        let _unknown1 = reader.read_u32::<LittleEndian>()?;
-        let _size = reader.read_u32::<LittleEndian>()?;
-        let _unknown2 = reader.read_u32::<LittleEndian>()?;
+        let header = read_header(reader)?;
+        assert_eq!(header.magic, 0x4e434c52);
 
         let pltt = reader.read_u32::<LittleEndian>()?;
         assert_eq!(pltt, 0x504c5454);
