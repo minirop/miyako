@@ -5,7 +5,7 @@ use std::io;
 use std::io::Read;
 use std::io::Seek;
 
-pub struct NcerCellAttr {
+pub struct NcerOam {
     pub y: u16,
     pub rotate_scale: bool,
     pub double_size: bool,
@@ -22,15 +22,17 @@ pub struct NcerCellAttr {
     pub character_name: u16,
     pub priority: u8,
     pub palette: u8,
+    pub width: u32,
+    pub height: u32,
 }
 
-pub struct NcerCell {
+pub struct NcerBank {
     pub attributes: u16,
-    pub oam: Vec<NcerCellAttr>,
+    pub oams: Vec<NcerOam>,
 }
 
 pub struct Ncer {
-    pub cells: Vec<NcerCell>,
+    pub banks: Vec<NcerBank>,
     pub labels: Vec<String>,
 }
 
@@ -42,7 +44,7 @@ impl Ncer {
         let cebk = reader.read_u32::<LittleEndian>()?;
         assert_eq!(cebk, 0x4345424b);
         let _size = reader.read_u32::<LittleEndian>()?;
-        let nb_cells = reader.read_u16::<LittleEndian>()?;
+        let bank_count = reader.read_u16::<LittleEndian>()?;
         let bank_attrib = reader.read_u16::<LittleEndian>()?;
         assert_eq!(bank_attrib, 0);
 
@@ -61,22 +63,22 @@ impl Ncer {
         let user_extended_offset = reader.read_u32::<LittleEndian>()?;
         assert_eq!(user_extended_offset, 0);
 
-        let mut cells = vec![];
+        let mut banks = vec![];
         let mut oams_entries = vec![];
-        for _ in 0..nb_cells {
+        for _ in 0..bank_count {
             let oam_entries = reader.read_u16::<LittleEndian>()?;
             oams_entries.push(oam_entries);
 
             let attributes = reader.read_u16::<LittleEndian>()?;
             let _oam_offset = reader.read_u32::<LittleEndian>()?;
 
-            cells.push(NcerCell {
+            banks.push(NcerBank {
                 attributes,
-                oam: vec![],
+                oams: vec![],
             });
         }
 
-        for (cell, entries) in cells.iter_mut().zip(oams_entries) {
+        for (bank, entries) in banks.iter_mut().zip(oams_entries) {
             for _ in 0..entries {
                 let attr0 = reader.read_u16::<LittleEndian>()?;
                 let attr1 = reader.read_u16::<LittleEndian>()?;
@@ -104,7 +106,9 @@ impl Ncer {
                 let priority = ((attr2 >> 10) & 0b11) as u8;
                 let palette = ((attr2 >> 12) & 0x0F) as u8;
 
-                cell.oam.push(NcerCellAttr {
+                let (width, height) = get_oam_bounds(shape, size);
+
+                bank.oams.push(NcerOam {
                     y,
                     rotate_scale,
                     double_size,
@@ -121,6 +125,8 @@ impl Ncer {
                     character_name,
                     priority,
                     palette,
+                    width,
+                    height,
                 });
             }
         }
@@ -157,6 +163,33 @@ impl Ncer {
 
         assert!(reader.read_u8().is_err());
 
-        Ok(Self { cells, labels })
+        Ok(Self { banks, labels })
+    }
+}
+
+fn get_oam_bounds(shape: u8, size: u8) -> (u32, u32) {
+    match shape {
+        // square
+        0 => {
+            let side = (size as u32 + 1) * 8;
+            (side, side)
+        }
+        // horizontal
+        1 => match size {
+            0 => (16, 8),
+            1 => (32, 8),
+            2 => (32, 16),
+            3 => (64, 32),
+            _ => todo!(),
+        },
+        // vertical
+        2 => match size {
+            0 => (8, 16),
+            1 => (8, 32),
+            2 => (16, 32),
+            3 => (32, 64),
+            _ => todo!(),
+        },
+        _ => todo!(),
     }
 }
