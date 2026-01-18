@@ -119,6 +119,7 @@ fn decode_image(args: Args) -> io::Result<()> {
     }
 
     let _ = image.save(&args.filename);
+
     Ok(())
 }
 
